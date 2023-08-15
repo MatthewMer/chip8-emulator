@@ -1,0 +1,21 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "e:\\workspace\\chip8\\chip8\\registers.h",
+        "ProvidedModule": "",
+        "Includes": [
+            "e:\\workspace\\chip8\\chip8\\defs.h",
+            "e:\\microsoft visual studio\\2022\\vc\\tools\\msvc\\14.35.32215\\include\\cstdint",
+            "e:\\microsoft visual studio\\2022\\vc\\tools\\msvc\\14.35.32215\\include\\yvals_core.h",
+            "e:\\microsoft visual studio\\2022\\vc\\tools\\msvc\\14.35.32215\\include\\vcruntime.h",
+            "e:\\microsoft visual studio\\2022\\vc\\tools\\msvc\\14.35.32215\\include\\sal.h",
+            "e:\\microsoft visual studio\\2022\\vc\\tools\\msvc\\14.35.32215\\include\\concurrencysal.h",
+            "e:\\microsoft visual studio\\2022\\vc\\tools\\msvc\\14.35.32215\\include\\vadefs.h",
+            "e:\\microsoft visual studio\\2022\\vc\\tools\\msvc\\14.35.32215\\include\\xkeycheck.h",
+            "e:\\microsoft visual studio\\2022\\vc\\tools\\msvc\\14.35.32215\\include\\stdint.h",
+            "e:\\workspace\\chip8\\chip8\\config.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
