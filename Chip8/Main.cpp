@@ -9,16 +9,17 @@
 #include "defs.h"
 #include "config.h"
 
-void print_error_usage(char** argv, int j);
-int print_error(int argc, char** argv, u8& params);
+void print_usage(char** argv, int j);
+int print_params(int argc, char** argv, u8& params);
+void print_info(char* file, Chip8 cpu, std::vector<char> buf);
 static float crt(float x, float y, float x_centre, float y_centre);
 
 const int x_centre = CHIP8_WIDTH_HALF * CHIP8_WIN_MULT;
 const int y_centre = CHIP8_HEIGHT_HALF * CHIP8_WIN_MULT;
 
 const char* err_msg[] = {
-    "Memory: offset out of bounds\n",
-    "Stack: offset out of bounds\n",
+    "Memory: index out of bounds\n",
+    "Stack: index out of bounds\n",
     "Screen: Pixel out of bounds (max: h:64, v:32)\n"
 };
 
@@ -26,7 +27,7 @@ const char* err_msg[] = {
 int main(int argc, char** argv) {
 
     u8 params = 0x00;
-    int errors = print_error(argc, argv, params);
+    int errors = print_params(argc, argv, params);
     if (errors) return errors;
 
     // load file -----
@@ -54,6 +55,7 @@ int main(int argc, char** argv) {
     Chip8 cpu = Chip8();
     cpu.load(buf);
 
+    if (params & 0x1) print_info(argv[argc - 1], cpu, buf);
     bool step = (params & 0x2);
     
     char key;
@@ -123,6 +125,7 @@ int main(int argc, char** argv) {
     }
 
     // execution -----
+    printf("\n ----- INSTRUCTION EXECUTION -----\n\n");
     while (1) {
 
         // handle events
@@ -177,7 +180,7 @@ int main(int argc, char** argv) {
 }
 
 
-void print_error_usage(char** argv, int j) {
+void print_usage(char** argv, int j) {
     printf("\nERROR: No proper parameter recognized at position %i:\n", j);
     for (int k = 0; argv[k]; k++) {
         printf("%s ", argv[k]);
@@ -193,24 +196,21 @@ void print_error_usage(char** argv, int j) {
     std::cout << " ^\n\nType \"Chip8.exe -h\" or \"Chip8.exe --help\" for more information about usage\n\n";
 }
 
-int print_error(int argc, char** argv, u8& params) {
+int print_params(int argc, char** argv, u8& params) {
     if (argc < 2 || (argc == 2 && (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0))) {
         printf("\nUsage:\n\tChip8.exe <options> \"\\path\\to\\file\\to\\load\"\n\n");
         printf("Options:\n\t--verbose/-v\t\tPrint additional information to stdout\n");
         printf("\t--help/-h\t\tShow information aboout proper usage\n");
         printf("\t--step/-s\t\tExecute instructions step by step\n");
 
-        if (argc < 2)
-            return 1;
-        else
-            return 0;
+        return 1;
     }
     else if (argc > 2) {
         for (int j = 1; argv[j + 1]; j++) {
 
             // no proper parameter
             if (*(*(argv + j)) != '-') {
-                print_error_usage(argv, j);
+                print_usage(argv, j);
                 return 1;
             }
 
@@ -222,15 +222,10 @@ int print_error(int argc, char** argv, u8& params) {
                 params |= 0x2;
             }
             // no proper parameter
-            else {
-                if (strcmp(argv[j], "-h") == 0 || strcmp(argv[j], "--help") == 0) {
-                    printf("\nWrong Usage\n\nType \"Chip8.exe -h\" or \"Chip8.exe --help\" for more information about usage\n\n");
-                    return 1;
-                }
-                print_error_usage(argv, j);
+            else if (strcmp(argv[j], "-h") == 0 || strcmp(argv[j], "--help") == 0) {
+                printf("\nWrong Usage\n\nType \"Chip8.exe -h\" or \"Chip8.exe --help\" for more information about usage\n\n");
                 return 1;
             }
-
         }
         if (*(*(argv + argc - 1)) == '-') {
             printf("\nA parameter is no file\n\nType \"Chip8.exe -h\" or \"Chip8.exe --help\" for more information about usage\n\n");
@@ -255,56 +250,63 @@ static float crt(float x, float y, float x_centre, float y_centre) {
 }
 
 
-/*
-void print_info(u8 params, int argc, char* argv[], Chip8 cpu, std::vector<char> buf) {
+void print_info(char* file, Chip8 cpu, std::vector<char> buf) {
+
+    registers* reg = cpu.get_registers();
+    u8* memory = cpu.get_memory();
+    u16* stack = cpu.get_stack();
+
     // print startup info -----
-    if (params & 0x1) {
+    printf("\n\n -----===== STARTUP INFO =====-----\n");
 
-        printf("\n\n -----===== STARTUP INFO =====-----\n");
-
-        printf("\n ----- FILE INFO -----\n");
-        printf("\nFile name:\t\t%s", argv[argc - 1]);
-        printf("\nTitle:\t\t\t");
-        int i = 0;
-        while (buf[i] < 0x41 || buf[i] > 0x5a) { i++; }
-        while (buf[i] >= 0x41 && buf[i] <= 0x5a || buf[i] == 0x20) {
-            printf("%c", (char)buf[i++]);
-        }
-        printf("\nSize:\t\t\t%i Bytes / %.2f kB\n", (int)buf.size(), buf.size() / 1000.0);
-
-        printf("\n\n ----- MEMORY MAP -----\n\nAddr.\t");
-        for (int i = 0; i < 0x10; i++) {
-            printf("0x%.2x ", i);
-        }
-        printf("\n\t\t\t\t\t\t\t\t\t\t\t ___Interpreter reserved\n");
-        for (int y = 0; y < sizeof(cpu.memory) / 0x10; y++) {
-            printf("0x%.3x\t", y * 0x10);
-            for (int x = 0; x < 0x10; x++) {
-                printf("  %.2x ", cpu.memory[y * 0x10 + x]);
-            }
-            if (y == 0x1f) printf(" ___Chip-8 program");
-            printf("\n");
-        }
-
-        printf("\n\n ----- CPU -----\n\n");
-        printf("Stack (%i * 2 Bytes):\t\t", CHIP8_STACK_SIZE);
-        for (int x = 0; x < CHIP8_STACK_SIZE; x++) {
-            if (x % 8 == 0) printf("\n0x%.2x to 0x%.2x:\t", (x / 8) * 0x8, (x / 8) * 0x8 + 0x7);
-            printf("0x%.4x ", cpu.stack.stack[x]);
-        }
-        printf("\n\nRegisters:\n");
-        printf("PC:\t\t0x%.4x\t(Program Counter)\n", cpu.reg.PC);
-        printf("SP:\t\t0x%.2x\t(Stack Pointer)\n", cpu.reg.SP);
-        printf("I:\t\t0x%.4x\t(Mainly addresses)\n", cpu.reg.I);
-        printf("dt:\t\t0x%.2x\t(Delay timer at 60Hz)\n", cpu.reg.dt);
-        printf("st:\t\t0x%.2x\t(Sound timer at 60Hz)\n", cpu.reg.st);
-        printf("V (Data registers):");
-        for (int x = 0; x < CHIP8_REGISTERS_SIZE; x++) {
-            if (x % 8 == 0) printf("\n0x%.2x to 0x%.2x:\t", (x / 8) * 0x8, (x / 8) * 0x8 + 0x7);
-            printf("0x%.2x ", cpu.reg.V[x]);
-        }
-
-        std::cout << "\n\n";
+    printf("\n ----- FILE INFO -----\n");
+    printf("\nFile name:\t\t%s", file);
+    printf("\nTitle:\t\t\t");
+    int i = 0;
+    while (buf[i] < 0x41 || buf[i] > 0x5a) { i++; }
+    while (buf[i] >= 0x41 && buf[i] <= 0x5a || buf[i] == 0x20) {
+        printf("%c", (char)buf[i++]);
     }
+    printf("\nSize:\t\t\t%i Bytes / %.2f kB\n", (int)buf.size(), buf.size() / 1000.0);
+
+    printf("\n\n ----- MEMORY MAP -----\n\nAddr.\t");
+    for (int i = 0; i < 0x10; i++) {
+        printf("0x%.2x ", i);
+    }
+    printf("\n\t\t\t\t\t\t\t\t\t\t\t ___Interpreter reserved\n");
+    int mem_size = cpu.get_mem_size();
+    int y;
+    for (y = 0; y < mem_size / 0x10; y++) {
+        printf("0x%.3x\t", y * 0x10);
+        for (int x = 0; x < 0x10; x++) {
+            printf("  %.2x ", memory[y * 0x10 + x]);
+        }
+        if (y == 0x1f) printf(" ___Chip-8 program");
+        printf("\n");
+    }
+    printf("0x%.3x\t", y * 0x10);
+    for (int i = 0; i < mem_size % 0x10; i++) {
+        printf("  %.2x ", memory[y * 0x10 + i]);
+    }
+    printf("\n");
+
+    printf("\n\n ----- CPU -----\n\n");
+    printf("Stack (%i * 2 Bytes):\t\t", CHIP8_STACK_SIZE);
+    for (int x = 0; x < CHIP8_STACK_SIZE; x++) {
+        if (x % 8 == 0) printf("\n0x%.2x to 0x%.2x:\t", (x / 8) * 0x8, (x / 8) * 0x8 + 0x7);
+        printf("0x%.4x ", stack[x]);
+    }
+    printf("\n\nRegisters:\n");
+    printf("PC:\t\t0x%.4x\t(Program Counter)\n", (*reg).PC);
+    printf("SP:\t\t0x%.2x\t(Stack Pointer)\n", (*reg).SP);
+    printf("I:\t\t0x%.4x\t(Mainly addresses)\n", (*reg).I);
+    printf("dt:\t\t0x%.2x\t(Delay timer at 60Hz)\n", (*reg).dt);
+    printf("st:\t\t0x%.2x\t(Sound timer at 60Hz)\n", (*reg).st);
+    printf("V (Data registers):");
+    for (int x = 0; x < CHIP8_REGISTERS_SIZE; x++) {
+        if (x % 8 == 0) printf("\n0x%.2x to 0x%.2x:\t", (x / 8) * 0x8, (x / 8) * 0x8 + 0x7);
+        printf("0x%.2x ", (*reg).V[x]);
+    }
+
+    std::cout << "\n\n";
 }
-*/

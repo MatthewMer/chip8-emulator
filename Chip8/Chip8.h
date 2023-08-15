@@ -35,6 +35,7 @@ private:
 
     // memory
     u8 memory[CHIP8_MEMORY_SIZE] = {};
+    int mem_size;
 
     // stack
     u16 stack[CHIP8_STACK_SIZE] = {};
@@ -73,6 +74,12 @@ public:
 
     Keyboard keys;
     Screen screen;
+
+    // access cpu components
+    u8* get_memory();
+    int get_mem_size();
+    u16* get_stack();
+    registers* get_registers();
 };
 
 #endif

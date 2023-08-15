@@ -367,10 +367,13 @@ u8 Chip8::read_8(u16 addr) {
 // ----- MEMORY ACCESS -----
 
 void Chip8::load(std::vector<char> &buf) {
-	for (int i = 0; i < buf.size(); i++) {
+	int i;
+	for (i = 0; i < buf.size(); i++) {
 		memory[CHIP8_PROG_LOAD_ADDR + i] = *(u8*)&buf[i];
 	}
 	reg.PC = CHIP8_PROG_LOAD_ADDR;
+
+	mem_size = i + CHIP8_PROG_LOAD_ADDR;
 }
 
 u16 Chip8::next_instr() {
@@ -391,4 +394,20 @@ void Chip8::stack_push(u16 data) {
 u16 Chip8::stack_pop() {
 	reg.SP--;
 	return stack[reg.SP];
+}
+
+// access
+u8* Chip8::get_memory() {
+	return memory;
+}
+int Chip8::get_mem_size() {
+	return mem_size;
+}
+
+u16* Chip8::get_stack() {
+	return stack;
+}
+
+registers* Chip8::get_registers() {
+	return &reg;
 }
