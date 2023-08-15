@@ -398,7 +398,7 @@ u16 Chip8::next_instr() {
 // ----- STACK -----
 void Chip8::stack_push(u16 data) {
 	if (reg.SP == CHIP8_STACK_SIZE) {
-		printf("\t[SP:$%.2x]($%.4x)\nERROR: Stackoverflow\n", reg.SP, stack[reg.SP]);
+		printf("\tSP($%.2x)\nERROR: Stackoverflow\n", reg.SP);
 		error_flags |= 0x02;
 	}
 	else {
@@ -408,7 +408,7 @@ void Chip8::stack_push(u16 data) {
 }
 u16 Chip8::stack_pop() {
 	if (reg.SP == 0) {
-		printf("\t[SP:$%.2x]($%.4x)\nERROR: Nothing on stack\n", reg.SP, stack[reg.SP]);
+		printf("\tSP($%.2x)\nERROR: Nothing on stack\n", reg.SP);
 		error_flags |= 0x04;
 	}
 	else {
