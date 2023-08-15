@@ -2,7 +2,7 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>E:\_Workspace\Git\_github\chip8-emulator\x64\Release\Chip8.exe</FullPath>
+      <FullPath>E:\_Workspace\_github\chip8-emulator\x64\Release\Chip8.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

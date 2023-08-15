@@ -49,6 +49,7 @@ private:
 
     // isntruction
     u16 instr;
+    u8 error_flags = 0x00;
 
     // time
     steady_clock::time_point time_prev;
@@ -60,7 +61,7 @@ public:
     Chip8();
 
     // CPU
-    void exec();
+    bool exec();
     void load(std::vector<char> &buf);
 
     // MEMORY

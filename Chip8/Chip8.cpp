@@ -18,7 +18,7 @@ Chip8::Chip8(){
 
 // ----- CPU FETCH/EXECUTE -----
 
-void Chip8::exec() {
+bool Chip8::exec() {
 
 	if (!awaits_key) {
 		// execute
@@ -94,6 +94,7 @@ void Chip8::exec() {
 			}break;
 			default:
 			{
+				error_flags |= 0x01;
 				printf("Unknown instruction");
 			}break;
 			}
@@ -130,6 +131,7 @@ void Chip8::exec() {
 			}break;
 			default:
 			{
+				error_flags |= 0x01;
 				printf("Unknown instruction");
 			}break;
 			}
@@ -170,6 +172,7 @@ void Chip8::exec() {
 		}break;
 		default:
 		{
+			error_flags |= 0x01;
 			printf("Unknown instruction");
 		}break;
 		}
@@ -184,6 +187,8 @@ void Chip8::exec() {
 			}
 		}
 	}
+
+	return error_flags;
 }
 
 void Chip8::exec_0(u16 data) {
@@ -200,6 +205,7 @@ void Chip8::exec_0(u16 data) {
 	}break;
 	default:
 	{
+		error_flags |= 0x01;
 		printf("Unknown instruction");
 	}break;
 	}
@@ -268,6 +274,7 @@ void Chip8::exec_8(u16 data) {
 		*reg.VF = carry;
 	}break;
 	default:
+		error_flags |= 0x01;
 		printf("Unknown instruction");
 		break;
 	}
@@ -292,6 +299,7 @@ void Chip8::exec_e(u16 data) {
 		}
 		break;
 	default:
+		error_flags |= 0x01;
 		printf("Unknown instruction");
 		break;
 	}
@@ -350,6 +358,7 @@ void Chip8::exec_f(u16 data) {
 		}
 		break;
 	default:
+		error_flags |= 0x01;
 		printf("Unknown instruction");
 		break;
 	}
@@ -388,12 +397,24 @@ u16 Chip8::next_instr() {
 
 // ----- STACK -----
 void Chip8::stack_push(u16 data) {
-	stack[reg.SP] = data;
-	reg.SP++;
+	if (reg.SP == CHIP8_STACK_SIZE) {
+		printf("\t[SP:$%.2x]($%.4x)\nERROR: Stackoverflow\n", reg.SP, stack[reg.SP]);
+		error_flags |= 0x02;
+	}
+	else {
+		stack[reg.SP] = data;
+		reg.SP++;
+	}
 }
 u16 Chip8::stack_pop() {
-	reg.SP--;
-	return stack[reg.SP];
+	if (reg.SP == 0) {
+		printf("\t[SP:$%.2x]($%.4x)\nERROR: Nothing on stack\n", reg.SP, stack[reg.SP]);
+		error_flags |= 0x04;
+	}
+	else {
+		reg.SP--;
+		return stack[reg.SP];
+	}
 }
 
 // access

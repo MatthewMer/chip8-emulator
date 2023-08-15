@@ -126,7 +126,9 @@ int main(int argc, char** argv) {
 
     // execution -----
     printf("\n ----- INSTRUCTION EXECUTION -----\n\n");
-    while (1) {
+    bool error = false;
+
+    while (!error) {
 
         // handle events
         SDL_Event event;
@@ -154,7 +156,7 @@ int main(int argc, char** argv) {
         }
 
         // execute
-        cpu.exec();
+        error = cpu.exec();
 
         // render screen
         SDL_SetRenderDrawColor(renderer, 0x0, 0x11, 0x0, 0x0);          // Red, Green, Blue, Alpha
