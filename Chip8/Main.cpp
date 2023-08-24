@@ -4,18 +4,27 @@
 #include <cmath>
 #include <conio.h>
 
+
 #include "SDL.h"
+#include "SDL_opengl.h"
 #include "Chip8.h"
 #include "defs.h"
 #include "config.h"
+
 
 void print_usage(char** argv, int j);
 int print_params(int argc, char** argv, u8& params);
 void print_info(char* file, Chip8 cpu, std::vector<char> buf);
 static float crt(float x, float y, float x_centre, float y_centre);
+void audio_callback(void* userdata, uint8_t* stream, int len);
 
+// screen
 const int x_centre = CHIP8_WIDTH_HALF * CHIP8_WIN_MULT;
 const int y_centre = CHIP8_HEIGHT_HALF * CHIP8_WIN_MULT;
+
+// audio
+static const float volume = 0.05;
+static const float frequency = 200.0;
 
 const char* err_msg[] = {
     "Memory: index out of bounds\n",
@@ -73,11 +82,32 @@ int main(int argc, char** argv) {
         SDL_WINDOWPOS_UNDEFINED,
         CHIP8_WIDTH * CHIP8_WIN_MULT,
         CHIP8_HEIGHT * CHIP8_WIN_MULT,
-        /*SDL_WINDOW_OPENGL | */SDL_WINDOW_SHOWN
+        /*SDL_WINDOW_OPENGL |*/ SDL_WINDOW_SHOWN
     );
     //SDL_GLContext gl_ctx = SDL_GL_CreateContext(window);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_TEXTUREACCESS_TARGET);
 
+    // init audio -----
+    uint64_t samples_played = 0;
+
+    static SDL_AudioSpec audio_spec_want, audio_spec;
+    SDL_zero(audio_spec_want);
+    SDL_zero(audio_spec);
+
+    audio_spec_want.freq = 44100;
+    audio_spec_want.format = AUDIO_F32;
+    audio_spec_want.channels = 2;
+    audio_spec_want.samples = 512;
+    audio_spec_want.callback = audio_callback;
+    audio_spec_want.userdata = (void*)&samples_played;
+
+    SDL_AudioDeviceID audio_device_id = SDL_OpenAudioDevice(
+        NULL, 0,
+        &audio_spec_want, &audio_spec,
+        SDL_AUDIO_ALLOW_FORMAT_CHANGE
+    );
+
+    // precalculate pixels
     const SDL_Color pixel_color = {
         0x0, 0xee, 0x88, 0x0
     };
@@ -127,9 +157,10 @@ int main(int argc, char** argv) {
 
     // execution -----
     printf("\n ----- INSTRUCTION EXECUTION -----\n\n");
-    bool error = false;
+    errors = 0x00;
+    bool sound_started = false;
 
-    while (!error) {
+    while (!errors) {
 
         // handle events
         SDL_Event event;
@@ -150,7 +181,19 @@ int main(int argc, char** argv) {
         }
 
         // execute
-        error = cpu.exec();
+        errors = cpu.exec();
+
+        // playback audio
+        if (cpu.sound || cpu.awaits_key) {
+            if (!sound_started) {
+                SDL_PauseAudioDevice(audio_device_id, 0);
+                sound_started = true;
+            }
+        }
+        else {
+            SDL_PauseAudioDevice(audio_device_id, 1);
+            sound_started = false;
+        }
 
         // render screen
         if (cpu.render) {
@@ -175,7 +218,9 @@ int main(int argc, char** argv) {
     }
 
     SDL_DestroyWindow(window);
-    return 0;
+
+    printf("\nExitcode: 0x%.2x\n\n", errors);
+    return errors;
 }
 
 
@@ -246,6 +291,22 @@ static float crt(float x, float y, float x_centre, float y_centre) {
     float x_ = x - x_centre;
     float y_percent = (y - y_centre) / y_centre;
     return (x_ * (-0.03 * pow(y_percent, 2) + 1)) * (1.f - (CHIP8_SCREEN_BORDER_PADDING / 100.f)) + x_centre;
+}
+
+void audio_callback(void* userdata, uint8_t* stream, int len)
+{
+    uint64_t* samples_played = (uint64_t*)userdata;
+    float* fstream = (float*)(stream);
+
+    for (int sid = 0; sid < (len / 8); ++sid)
+    {
+        double time = (*samples_played + sid) / 44100.0;
+        double x = 2.0 * M_PI * time * frequency;
+        fstream[2 * sid + 0] = volume * (sin(x) > 0 ? 1.0 : -1.0); /* L */
+        fstream[2 * sid + 1] = fstream[2 * sid + 0]; /* R */
+    }
+
+    *samples_played += (len / 8);
 }
 
 

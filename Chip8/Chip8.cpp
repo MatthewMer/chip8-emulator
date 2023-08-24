@@ -21,23 +21,27 @@ Chip8::Chip8(){
 
 // ----- CPU FETCH/EXECUTE -----
 
-bool Chip8::exec() {
+u8 Chip8::exec() {
 
-	// delay timer
-	if (reg.dt > 0) {
+	// delay timer/sound timer
+	if (reg.dt > 0 || reg.st > 0) {
 		delaytimer_cur = high_resolution_clock::now();
 		dt_time = duration_cast<milliseconds>(delaytimer_cur - delaytimer_prev).count();
 
 		if (dt_time >= CHIP8_DT_TIME) {
-			delaytimer_prev = delaytimer_cur;
-			reg.dt--;
-		}
-	}
+			if (reg.dt > 0) {
+				delaytimer_prev = delaytimer_cur;
+				reg.dt--;
+			}
 
-	// sound timer
-	if (reg.st > 0) {
-		Beep(500, reg.st * CHIP8_DT_TIME);
-		reg.st = 0;
+			if (reg.st > 0) {
+				sound = true;
+				reg.st--;
+			}
+			else {
+				sound = false;
+			}
+		}
 	}
 
 	if (!awaits_key) {
@@ -200,6 +204,7 @@ bool Chip8::exec() {
 			awaits_key = false;
 		}
 
+		sound = true;
 		return 0x00;
 	}
 }

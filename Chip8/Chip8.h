@@ -44,7 +44,6 @@ private:
     registers reg;
 
     // await key
-    bool awaits_key = false;
     u8* key_dest;
 
     // isntruction
@@ -65,7 +64,7 @@ public:
     Chip8();
 
     // CPU
-    bool exec();
+    u8 exec();
     void load(std::vector<char> &buf);
 
     // MEMORY
@@ -86,8 +85,10 @@ public:
     u16* get_stack();
     registers* get_registers();
 
-    // rendering
+    // rendering/sound/key press
     bool render;
+    bool sound;
+    bool awaits_key = false;
 };
 
 #endif
