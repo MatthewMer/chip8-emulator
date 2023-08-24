@@ -25,7 +25,8 @@ public:
 
 	bool key_isdown(int key);
 	void key_down(int key);
-	void key_up(int key);
+
+	u8 any_key_down();
 };
 
 #endif

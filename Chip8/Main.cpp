@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
             float x_offset = x * CHIP8_WIN_MULT + 1;
             float y_offset = y * CHIP8_WIN_MULT + 1;
 
-            
+            // first triangle
             std::vector<SDL_Vertex> verts = {
                 { SDL_FPoint{ crt(x_offset + pixel_margin, y_offset + pixel_margin, x_centre, y_centre), crt(y_offset + pixel_margin, x_offset + pixel_margin, y_centre, x_centre)}, pixel_color, SDL_FPoint{0},},
                 { SDL_FPoint{ crt(x_offset + pixel_margin, y_offset + CHIP8_WIN_MULT - pixel_margin, x_centre, y_centre), crt(y_offset + CHIP8_WIN_MULT - pixel_margin, x_offset + pixel_margin, y_centre, x_centre)}, pixel_color, SDL_FPoint{ 0 }, },
@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
                 { SDL_FPoint{ x_offset + CHIP8_WIN_MULT - pixel_margin, y_offset + pixel_margin}, pixel_color, SDL_FPoint{ 0 }, },
             };*/
 
+            // second triangle
             std::vector<SDL_Vertex> verts_ = {
                 { SDL_FPoint{ crt(x_offset + CHIP8_WIN_MULT - pixel_margin, y_offset + pixel_margin, x_centre, y_centre), crt(y_offset + pixel_margin, x_offset + CHIP8_WIN_MULT - pixel_margin, y_centre, x_centre)}, pixel_color, SDL_FPoint{0},},
                 { SDL_FPoint{ crt(x_offset + pixel_margin, y_offset + CHIP8_WIN_MULT - pixel_margin, x_centre, y_centre), crt(y_offset + CHIP8_WIN_MULT - pixel_margin, x_offset + pixel_margin, y_centre, x_centre)}, pixel_color, SDL_FPoint{0},},
@@ -138,18 +139,11 @@ int main(int argc, char** argv) {
                 SDL_DestroyWindow(window);
                 return 0;
                 break;
-            case SDL_KEYDOWN:
-                key = event.key.keysym.sym;
-                vkey = cpu.keys.get_mapped_key(key);
-                if (vkey != -1) {
-                    cpu.keys.key_down(vkey);
-                }
-                break;
             case SDL_KEYUP:
                 key = event.key.keysym.sym;
                 vkey = cpu.keys.get_mapped_key(key);
                 if (vkey != -1) {
-                    cpu.keys.key_up(vkey);
+                    cpu.keys.key_down(vkey);
                 }
                 break;
             }
@@ -159,20 +153,23 @@ int main(int argc, char** argv) {
         error = cpu.exec();
 
         // render screen
-        SDL_SetRenderDrawColor(renderer, 0x0, 0x11, 0x0, 0x0);          // Red, Green, Blue, Alpha
-        SDL_RenderClear(renderer);
+        if (cpu.render) {
+            SDL_SetRenderDrawColor(renderer, 0x0, 0x11, 0x0, 0x0);          // Red, Green, Blue, Alpha
+            SDL_RenderClear(renderer);
 
-        //SDL_SetRenderDrawColor(renderer, 0x0, 0xff, 0x99, 0x0);
-        for (int x = 0; x < CHIP8_WIDTH; x++) {
-            for (int y = 0; y < CHIP8_HEIGHT; y++) {
-                if (cpu.screen.isset(x, y)) {
-                    int tris_offset = (x * CHIP8_HEIGHT + y) * 2;
-                    SDL_RenderGeometry(renderer, nullptr, pixel_triangles[tris_offset].data(), pixel_triangles[tris_offset].size(), nullptr, 0);
-                    SDL_RenderGeometry(renderer, nullptr, pixel_triangles[tris_offset + 1].data(), pixel_triangles[tris_offset + 1].size(), nullptr, 0);
+            //SDL_SetRenderDrawColor(renderer, 0x0, 0xff, 0x99, 0x0);
+            for (int x = 0; x < CHIP8_WIDTH; x++) {
+                for (int y = 0; y < CHIP8_HEIGHT; y++) {
+                    if (cpu.screen.isset(x, y)) {
+                        int tris_offset = (x * CHIP8_HEIGHT + y) * 2;
+                        SDL_RenderGeometry(renderer, nullptr, pixel_triangles[tris_offset].data(), pixel_triangles[tris_offset].size(), nullptr, 0);
+                        SDL_RenderGeometry(renderer, nullptr, pixel_triangles[tris_offset + 1].data(), pixel_triangles[tris_offset + 1].size(), nullptr, 0);
+                    }
                 }
             }
+            SDL_RenderPresent(renderer);
+            cpu.render = false;
         }
-        SDL_RenderPresent(renderer);
 
         if (step) char c = _getch();
     }
@@ -248,7 +245,7 @@ int print_params(int argc, char** argv, u8& params) {
 static float crt(float x, float y, float x_centre, float y_centre) {
     float x_ = x - x_centre;
     float y_percent = (y - y_centre) / y_centre;
-    return x_ * (-0.03 * pow(y_percent, 2) + 1) + x_centre;
+    return (x_ * (-0.03 * pow(y_percent, 2) + 1)) * (1.f - (CHIP8_SCREEN_BORDER_PADDING / 100.f)) + x_centre;
 }
 
 

@@ -51,11 +51,15 @@ private:
     u16 instr;
     u8 error_flags = 0x00;
 
-    // time
-    steady_clock::time_point time_prev;
-    steady_clock::time_point time_cur;
-    const int ms_per_decr = 17;
-    int time_passed;
+    // timer
+    steady_clock::time_point delaytimer_prev;
+    steady_clock::time_point delaytimer_cur;
+    int dt_time;
+
+    // clock
+    steady_clock::time_point clock_prev;
+    steady_clock::time_point clock_cur;
+    int clock_time;
 
 public:
     Chip8();
@@ -81,6 +85,9 @@ public:
     int get_mem_size();
     u16* get_stack();
     registers* get_registers();
+
+    // rendering
+    bool render;
 };
 
 #endif

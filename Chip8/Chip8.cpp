@@ -12,7 +12,10 @@ Chip8::Chip8(){
 	memset(this, 0, sizeof(this));
 	memcpy(&this->memory, default_charset, sizeof(default_charset));
 
-	time_prev = high_resolution_clock::now();
+	delaytimer_prev = high_resolution_clock::now();
+	clock_prev = high_resolution_clock::now();
+
+	render = false;
 }
 
 
@@ -20,77 +23,160 @@ Chip8::Chip8(){
 
 bool Chip8::exec() {
 
-	if (!awaits_key) {
-		// execute
-		// 
-		// delay timer
-		if (reg.dt > 0) {
-			do {
-				time_cur = high_resolution_clock::now();
-				time_passed = duration_cast<milliseconds>(time_cur - time_prev).count();
-			} while (time_passed < ms_per_decr);
-			time_prev = time_cur;
+	// delay timer
+	if (reg.dt > 0) {
+		delaytimer_cur = high_resolution_clock::now();
+		dt_time = duration_cast<milliseconds>(delaytimer_cur - delaytimer_prev).count();
+
+		if (dt_time >= CHIP8_DT_TIME) {
+			delaytimer_prev = delaytimer_cur;
 			reg.dt--;
 		}
+	}
 
-		// sound timer
-		if (reg.st > 0) {
-			Beep(500, reg.st * ms_per_decr);
-			reg.st = 0;
-		}
+	// sound timer
+	if (reg.st > 0) {
+		Beep(500, reg.st * CHIP8_DT_TIME);
+		reg.st = 0;
+	}
 
+	if (!awaits_key) {
 		// instruction execution
+		clock_cur = high_resolution_clock::now();
+		clock_time = duration_cast<milliseconds>(clock_cur - clock_prev).count();
 
-		instr = next_instr();
+		if (clock_time >= CHIP8_CLOCK_TIME) {
+			clock_prev = clock_cur;
 
-		u8 opcode = (instr & 0xf000) >> 12;
-		u16 data = instr & 0x0fff;
+			instr = next_instr();
 
-		switch (opcode) {
-		case 0x0:
-		{
-			exec_0(data);
-		}break;
-		case 0x1:
-		{
-			printf("JP $%.3x", data);
-			reg.PC = data;
-		}break;
-		case 0x2:
-		{
-			printf("CALL $%.3x", data);
-			stack_push(reg.PC);
-			reg.PC = data;
-		}break;
-		case 0x3:
-		{
-			u8 x = (data & 0xf00) >> 8;
-			u8 kk = data & 0xff;
-			printf("SE V%.1x($%.2x), $%.2x", x, reg.V[x], kk);
-			if (reg.V[x] == kk) {
-				reg.PC += 2;
-			}
-		}break;
-		case 0x4:
-		{
-			u8 x = (data & 0xf00) >> 8;
-			u8 kk = data & 0xff;
-			printf("SNE V%.1x($%.2x), $%.2x", x, reg.V[x], kk);
-			if (reg.V[x] != kk) {
-				reg.PC += 2;
-			}
-		}break;
-		case 0x5:
-		{
-			switch (data & 0xf) {
+			u8 opcode = (instr & 0xf000) >> 12;
+			u16 data = instr & 0x0fff;
+
+			switch (opcode) {
 			case 0x0:
+			{
+				exec_0(data);
+			}break;
+			case 0x1:
+			{
+				printf("JP $%.3x", data);
+				reg.PC = data;
+			}break;
+			case 0x2:
+			{
+				printf("CALL $%.3x", data);
+				stack_push(reg.PC);
+				reg.PC = data;
+			}break;
+			case 0x3:
+			{
+				u8 x = (data & 0xf00) >> 8;
+				u8 kk = data & 0xff;
+				printf("SE V%.1x($%.2x), $%.2x", x, reg.V[x], kk);
+				if (reg.V[x] == kk) {
+					reg.PC += 2;
+				}
+			}break;
+			case 0x4:
+			{
+				u8 x = (data & 0xf00) >> 8;
+				u8 kk = data & 0xff;
+				printf("SNE V%.1x($%.2x), $%.2x", x, reg.V[x], kk);
+				if (reg.V[x] != kk) {
+					reg.PC += 2;
+				}
+			}break;
+			case 0x5:
+			{
+				switch (data & 0xf) {
+				case 0x0:
+				{
+					u8 x = (data & 0xf00) >> 8;
+					u8 y = (data & 0xf0) >> 4;
+					printf("SE V%.1x($%.2x), V%.1x($%.2x)", x, reg.V[x], y, reg.V[y]);
+					if (reg.V[x] == reg.V[y]) {
+						reg.PC += 2;
+					}
+				}break;
+				default:
+				{
+					error_flags |= 0x01;
+					printf("Unknown instruction");
+				}break;
+				}
+			}break;
+			case 0x6:
+			{
+				u8 x = (data & 0xf00) >> 8;
+				u8 kk = data & 0xff;
+				printf("LD V%.1x, $%.2x", x, kk);
+				reg.V[x] = kk;
+			}break;
+			case 0x7:
+			{
+				u8 x = (data & 0xf00) >> 8;
+				u8 kk = data & 0xff;
+				printf("ADD V%.1x($%.2x), $%.2x", x, reg.V[x], kk);
+				reg.V[x] += kk;
+			}break;
+			case 0x8:
+			{
+				exec_8(data);
+			}break;
+			case 0x9:
+			{
+				switch (data & 0xf) {
+				case 0x0:
+				{
+					u8 x = (data & 0xf00) >> 8;
+					u8 y = (data & 0xf0) >> 4;
+					printf("SNE V%.1x($%.2x), V%.1x($%.2x)", x, reg.V[x], y, reg.V[y]);
+					if (reg.V[x] != reg.V[y]) {
+						reg.PC += 2;
+					}
+				}break;
+				default:
+				{
+					error_flags |= 0x01;
+					printf("Unknown instruction");
+				}break;
+				}
+			}break;
+			case 0xa:
+			{
+				printf("LD I, $%.3x", data);
+				reg.I = data;
+			}break;
+			case 0xb:
+			{
+				printf("JP V0($%.2x), $%.3x", *reg.V0, data);
+				reg.PC = data + *reg.V0;
+			}break;
+			case 0xc:
+			{
+				u8 x = (data & 0xf00) >> 8;
+				u8 kk = data & 0xff;
+				printf("RND V%.1x($%.2x), $%.2x", x, reg.V[x], kk);
+				srand(clock());
+				reg.V[x] = (rand() % 256) & kk;
+			}break;
+			case 0xd:
 			{
 				u8 x = (data & 0xf00) >> 8;
 				u8 y = (data & 0xf0) >> 4;
-				printf("SE V%.1x($%.2x), V%.1x($%.2x)", x, reg.V[x], y, reg.V[y]);
-				if (reg.V[x] == reg.V[y]) {
-					reg.PC += 2;
-				}
+				u8 n = data & 0xf;
+				printf("DRW V%.1x($%.2x), V%.1x($%.2x), $%.1x", x, reg.V[x], y, reg.V[y], n);
+				*reg.VF = screen.draw_sprite(reg.V[x], reg.V[y], &memory[reg.I], n);
+				render = true;
+			}break;
+			case 0xe:
+			{
+				exec_e(data);
+			}break;
+			case 0xf:
+			{
+				exec_f(data);
 			}break;
 			default:
 			{
@@ -98,97 +184,24 @@ bool Chip8::exec() {
 				printf("Unknown instruction");
 			}break;
 			}
-		}break;
-		case 0x6:
-		{
-			u8 x = (data & 0xf00) >> 8;
-			u8 kk = data & 0xff;
-			printf("LD V%.1x, $%.2x", x, kk);
-			reg.V[x] = kk;
-		}break;
-		case 0x7:
-		{
-			u8 x = (data & 0xf00) >> 8;
-			u8 kk = data & 0xff;
-			printf("ADD V%.1x($%.2x), $%.2x", x, reg.V[x], kk);
-			reg.V[x] += kk;
-		}break;
-		case 0x8:
-		{
-			exec_8(data);
-		}break;
-		case 0x9:
-		{
-			switch (data & 0xf) {
-			case 0x0:
-			{
-				u8 x = (data & 0xf00) >> 8;
-				u8 y = (data & 0xf0) >> 4;
-				printf("SNE V%.1x($%.2x), V%.1x($%.2x)", x, reg.V[x], y, reg.V[y]);
-				if (reg.V[x] != reg.V[y]) {
-					reg.PC += 2;
-				}
-			}break;
-			default:
-			{
-				error_flags |= 0x01;
-				printf("Unknown instruction");
-			}break;
-			}
-		}break;
-		case 0xa:
-		{
-			printf("LD I, $%.3x", data);
-			reg.I = data;
-		}break;
-		case 0xb:
-		{
-			printf("JP V0($%.2x), $%.3x", *reg.V0, data);
-			reg.PC = data + *reg.V0;
-		}break;
-		case 0xc:
-		{
-			u8 x = (data & 0xf00) >> 8;
-			u8 kk = data & 0xff;
-			printf("RND V%.1x($%.2x), $%.2x", x, reg.V[x], kk);
-			srand(clock());
-			reg.V[x] = (rand() % 256) & kk;
-		}break;
-		case 0xd:
-		{
-			u8 x = (data & 0xf00) >> 8;
-			u8 y = (data & 0xf0) >> 4;
-			u8 n = data & 0xf;
-			printf("DRW V%.1x($%.2x), V%.1x($%.2x), $%.1x", x, reg.V[x], y, reg.V[y], n);
-			*reg.VF = screen.draw_sprite(reg.V[x], reg.V[y], &memory[reg.I], n);
-		}break;
-		case 0xe:
-		{
-			exec_e(data);
-		}break;
-		case 0xf:
-		{
-			exec_f(data);
-		}break;
-		default:
-		{
-			error_flags |= 0x01;
-			printf("Unknown instruction");
-		}break;
+
+			printf("\n");
+		}
+		else {
+			return 0x00;
 		}
 
-		printf("\n");
+		return error_flags;
 	}
 	else {
-		for (int i = 0; i < CHIP8_KEYS_NUM; i++) {
-			if (keys.key_isdown(i)) {
-				*key_dest = i;
-				awaits_key = false;
-			}
+		u8 key = keys.any_key_down();
+		if (key != 0xff) {
+			*key_dest = key;
+			awaits_key = false;
 		}
-	}
 
-	return error_flags;
+		return 0x00;
+	}
 }
 
 void Chip8::exec_0(u16 data) {
