@@ -88,7 +88,7 @@ public:
     // rendering/sound/key press
     bool render;
     bool sound;
-    bool awaits_key = false;
+    bool awaits_key;
 };
 
 #endif

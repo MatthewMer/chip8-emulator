@@ -16,6 +16,8 @@ Chip8::Chip8(){
 	clock_prev = high_resolution_clock::now();
 
 	render = false;
+	awaits_key = false;
+	sound = false;
 }
 
 
@@ -223,8 +225,12 @@ void Chip8::exec_0(u16 data) {
 	}break;
 	default:
 	{
+		// ignored due to hybrid roms
+		printf("NOOP");
+		/*
 		error_flags |= 0x01;
 		printf("Unknown instruction");
+		*/
 	}break;
 	}
 }

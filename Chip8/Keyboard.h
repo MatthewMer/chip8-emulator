@@ -10,10 +10,10 @@ class Keyboard {
 private:
 	bool pressed_keys[CHIP8_KEYS_NUM] = {};
 	char map[CHIP8_KEYS_NUM] = {
-		SDLK_0,SDLK_1, SDLK_2, SDLK_3, 
-		SDLK_4, SDLK_5, SDLK_6, SDLK_7, 
-		SDLK_8, SDLK_9, SDLK_a, SDLK_b, 
-		SDLK_c, SDLK_d, SDLK_e, SDLK_f
+		SDLK_x, SDLK_1, SDLK_2, SDLK_3, 
+		SDLK_q, SDLK_w, SDLK_e, SDLK_a, 
+		SDLK_s, SDLK_d, SDLK_z, SDLK_c, 
+		SDLK_4, SDLK_r, SDLK_f, SDLK_v
 	};
 
 public:

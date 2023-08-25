@@ -7,11 +7,11 @@
 #define CHIP8_HEIGHT 32
 #define CHIP8_HEIGHT_HALF CHIP8_HEIGHT / 2
 #define CHIP8_WIDTH_HALF CHIP8_WIDTH / 2
-#define CHIP8_WIN_MULT 20
+#define CHIP8_WIN_MULT 25
 #define CHIP8_SCREEN_BORDER_PADDING 5		// in percent
 #define EMU_WIN_TITLE "Chip8 Emulator"
 
-#define CHIP8_CLOCK_TIME 2						// in ms (500Hz)
+#define CHIP8_CLOCK_TIME 2					// in ns (500Hz)
 #define CHIP8_DT_TIME 17					// in ms (60Hz)
 
 #define CHIP8_MEMORY_SIZE 0x1000            // 4096 Bytes
